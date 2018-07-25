@@ -1,0 +1,6 @@
+#FileLock
+#Wed Jul 25 14:50:26 CST 2018
+hostName=archlinux
+id=164d03400f011609a8738799703c74285e24b45c7a4
+method=file
+server=192.168.0.197\:35023

@@ -1,0 +1,271 @@
+<html xmlns:th="http://www.thymeleaf.org" style="height: 100%">
+<head>
+    <div th:include="fragment/head :: head"></div>
+    <style type="text/css">
+        .nomal {
+            font-size: 30px;
+            color: #39ff71;
+        }
+
+        .error {
+            font-size: 30px;
+            color: #ff180c;
+        }
+    </style>
+</head>
+<body style="height: 100%">
+<div class="layui-layout layui-layout-admin">
+    <div class="layui-header" th:include="fragment/top :: top"></div>
+
+    <!--<div class="layui-side" th:include="fragment/left :: left"> </div>-->
+
+    <!--主体内容-->
+    <div class="layui-fluid" style="left: 0;margin-bottom: 44px;">
+        <!--<ul class="layui-tab-title">-->
+        <!--<li lay-id="0" class="layui-this">首页</li>-->
+        <!--</ul>-->
+        <div class="layui-row">
+            <div  th:each="a,iterStat:${hosts}">
+
+                <div th:class="${iterStat.index}%2!=0 ? 'layui-col-md7':'layui-col-md5'"
+                      style="padding-top: 15px;">
+                    <div th:unless="${iterStat.index%2==0}" class="layui-col-md3" style="margin-top: 100px;border: dashed;height: 1px;"></div>
+
+                    <div class="layui-card" th:classappend="${iterStat.index%2==0}?'layui-col-md12':'layui-col-md9'">
+                        <div class="layui-card-header"><i class="layui-icon layui-icon-chart-screen nomal"></i><span
+                                th:text="${a.IP}"></span></div>
+                        <div class="layui-card-body">
+                            <span>启动状态:</span><span th:id="${a.name+'start'}"></span><br/>
+                            <span>启动模式:</span><span th:id="${a.name+'startmodel'}"></span><br/>
+                            <span>保护模式:</span><span th:id="${a.name+'proModel'}"></span><br/>
+                            <span>日志同步参数:</span><span th:id="${a.name+'logsync'}"></span><br/>
+                            <span>角色:</span><span th:id="${a.name+'switch'}"></span><br/>
+                            <span>进程状态:</span><span th:name="${'process'}"><a>详细信息</a></span><br/>
+                            <span>同步状态:</span><span th:name="${'dg'}"><a>详细信息</a></span><br/>
+                            <span>日志情况:</span><span th:name="${'log'}"><a>详细信息</a></span><br/>
+                            <span>备份情况:</span><span th:name="${'rman'}"><a>详细信息</a></span><br/>
+                            <input type="hidden" name="id" th:value="${a.id}"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+                <div class="layui-col-md6" style="padding-top: 15px;">
+                    <div class="layui-card">
+                        <div class="layui-card-header"><i class="layui-icon layui-icon-file nomal"></i>文件备份信息</div>
+                        <div class="layui-card-body">
+                            <div id="file"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+    </div>
+
+    <div class="layui-footer" style="left: 0" th:include="fragment/bottom :: bottom"></div>
+
+    <!--<div class="individuation animated flipOutY layui-hide" th:include="fragment/setting"></div>-->
+</div>
+<div style="display: none" id="processdiv">
+    <table id="process"></table>
+</div>
+
+<div style="display: none" id="dgdiv">
+    <table id="dg"></table>
+</div>
+
+<div style="display: none" id="logdiv">
+    <table id="log"></table>
+</div>
+
+<div style="display: none" id="rmandiv">
+    <table id="rman"></table>
+</div>
+<!-- layui规范化用法 -->
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    hosts = [[${hosts}]];
+    layui.use(['form', 'table', 'laydate'], function () {
+        var $ = layui.$, table = layui.table, form = layui.form;
+
+        for (var i = 0; i < hosts.length; i++) {
+            setTimeout((function (i) {
+                var ip = hosts[i].name;
+                $.post("/start", {d: JSON.stringify(hosts[i])}, function (data) {
+                    if (data.code == 1) {
+                        $("#" + ip + "start").text("链接异常，请检查监听");
+                        $("#" + ip + "start").parent().prev("div").children("i").removeClass("nomal")
+                        $("#" + ip + "start").parent().prev("div").children("i").addClass("error")
+                    } else {
+                        $("#" + ip + "start").text(data.data.ins[0].STATUS)
+                    }
+                });
+                $.post("/startmodel", {d: JSON.stringify(hosts[i])}, function (data) {
+                    if (data.code == 1) {
+                        $("#" + ip + "startmodel").text("链接异常，请检查监听")
+                        $("#" + ip + "switch").text("链接异常，请检查监听")
+                        $("#" + ip + "proModel").text("链接异常，请检查监听")
+                    } else {
+                        if (data.data.ins[0].DATABASE_ROLE.indexOf("STANDBY") == -1) {
+                            $("#" + ip + "switch").text("主库")
+
+                        } else {
+                            $("#" + ip + "switch").text("备库")
+                        }
+                        $("#" + ip + "startmodel").text(data.data.ins[0].OPEN_MODE)
+                        $("#" + ip + "proModel").text(data.data.ins[0].PROTECTION_MODE)
+                    }
+
+                });
+                $.post("/logsync", {d: JSON.stringify(hosts[i])}, function (data) {
+                    if (data.code == 1) {
+                        $("#" + ip + "logsync").text("链接异常，请检查监听")
+                    } else {
+                        $("#" + ip + "logsync").text(data.data.ins[0].VALUE)
+                    }
+                });
+                $.post("/rman", {d: JSON.stringify(hosts[i])}, function (data) {
+                });
+            })(i), 100)
+        }
+        //进程状态
+        $("span[name='process'] > a").each(function () {
+            $(this).click(function () {
+                    var id = $($(this).parent().parent().children('input')).val();
+                    table.render({
+                        elem: '#process'
+                        , height: 315
+                        , method: 'post'
+                        , where: {d: id}
+                        , url: '/process' //数据接口
+                        , cols: [[ //表头
+                            {field: 'PROCESS', title: '进程', width: 80}
+                            , {field: 'STATUS', title: '状态', width: 135}
+                        ]]
+                    });
+                    layer.open({
+                        type: 1,
+                        title: false,
+                        shade: false,
+                        content: $('#processdiv'),
+                        cancel: function () {
+                        }
+                    })
+                }
+            )
+        })
+
+        //备份状态
+        $("span[name='dg'] > a").each(function () {
+            $(this).click(function () {
+                    var id = $($(this).parent().parent().children('input')).val();
+                    table.render({
+                        elem: '#dg'
+                        , height: 315
+                        , method: 'post'
+                        , width: 585
+                        , where: {d: id}
+                        , url: '/dg' //数据接口
+                        , cols: [[ //表头
+                            {field: 'MESSAGE', title: '进程', width: 300}
+                            , {field: 'SEVERITY', title: '状态', width: 150, sort: true}
+                            , {field: 'FACILITY', title: '状态', width: 135, sort: true}
+                        ]]
+                    });
+                    layer.open({
+                        type: 1,
+                        area: ['585px', '300px'],
+                        title: false,
+                        shade: false,
+                        content: $('#dgdiv'),
+                        cancel: function () {
+                        }
+                    })
+                }
+            )
+        })
+
+
+        $("span[name='log'] > a").each(function () {
+            $(this).click(function () {
+                var id = $($(this).parent().parent().children('input')).val();
+                table.render({
+                    elem: '#log'
+                    , height: 315
+                    , method: 'post'
+                    , where: {d: id}
+                    , url: '/logapply' //数据接口
+                    , cols: [[ //表头
+                        {field: 'NAME', title: '进程', width: 200}
+                        , {field: 'SEQ', title: '序号', width: 135, sort: true}
+                        , {field: 'APPLIED', title: '状态', width: 135, sort: true}
+                    ]]
+                });
+                layer.open({
+                    type: 1,
+                    area: ['470px', '300px'],
+                    title: false,
+                    shade: false,
+                    content: $('#logdiv'),
+                    cancel: function () {
+                    }
+                })
+            })
+        })
+
+        $("span[name='rman'] > a").each(function () {
+            $(this).click(function () {
+                var id = $($(this).parent().parent().children('input')).val();
+                table.render({
+                    elem: '#rman'
+                    , height: 315
+                    , method: 'post'
+                    , where: {d: id}
+                    , url: '/rman' //数据接口
+                    , cols: [[ //表头
+                        {field: 'START_TIME', title: '开始时间', width: 200, sort: true}
+                        , {field: 'END_TIME', title: '结束时间', width: 135, sort: true}
+                        , {field: 'INPUT_BYTES', title: '读取数据', width: 135}
+                        , {field: 'OUTPUT_BYTES', title: '写入数据', width: 135}
+                    ]]
+                });
+                layer.open({
+                    type: 1,
+                    area: ['615px', '300px'],
+                    title: false,
+                    shade: false,
+                    content: $('#rmandiv'),
+                    cancel: function () {
+                    }
+                })
+            })
+        })
+
+        $.post("/file", {}, function (data) {
+            if(data.code==1){
+                $("#file").append('<div>网络出错</div>');
+                $("#file").parent().prev("div").children("i").removeClass("nomal")
+                $("#file").parent().prev("div").children("i").addClass("error")
+            }else{
+
+            for (var i = 0; i < data.data.dir.length; i++) {
+                $("#file").append('<div>' + data.data.dir[i] + '</div>')
+                var b = data.data[data.data.dir[i]];
+                if (b.length > 0) {
+                    for (var i = 0; i < b.length; i++) {
+                        $("#file").append('<p style="text-indent:2em">' + b[i].name + '<span style="padding-left:10px;">' + (b[i].size / 1024 / 1024).toFixed(2) + 'MB</span><span style="padding-left:10px;">' + b[i].timestamp + '</span></p>')
+                    }
+                }
+
+            }
+            }
+
+
+        })
+    })
+    /*]]>*/
+</script>
+</body>
+
+
+</html>

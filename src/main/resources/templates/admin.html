@@ -49,7 +49,7 @@
                     </div>
                 </div>
             </div>
-
+                <div style="clear:both;"></div>
                 <div class="layui-col-md6" style="padding-top: 15px;">
                     <div class="layui-card">
                         <div class="layui-card-header"><i class="layui-icon layui-icon-file nomal"></i>文件备份信息</div>
@@ -123,8 +123,6 @@
                     } else {
                         $("#" + ip + "logsync").text(data.data.ins[0].VALUE)
                     }
-                });
-                $.post("/rman", {d: JSON.stringify(hosts[i])}, function (data) {
                 });
             })(i), 100)
         }
